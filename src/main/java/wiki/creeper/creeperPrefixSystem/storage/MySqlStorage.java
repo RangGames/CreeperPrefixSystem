@@ -119,11 +119,11 @@ public final class MySqlStorage implements AutoCloseable {
 
             statement.executeUpdate("CREATE TABLE IF NOT EXISTS weekly_rank_awards (" +
                     "week_key CHAR(8)," +
-                    "rank INT," +
+                    "rank_position INT," +
                     "uuid BINARY(16)," +
                     "title_id VARCHAR(64)," +
                     "awarded_at DATETIME," +
-                    "PRIMARY KEY(week_key, rank)" +
+                    "PRIMARY KEY(week_key, rank_position)" +
                     ")");
 
             statement.executeUpdate("CREATE TABLE IF NOT EXISTS title_progress (" +
@@ -365,7 +365,7 @@ public final class MySqlStorage implements AutoCloseable {
     }
 
     public void saveWeeklyAward(String weekKey, int rank, UUID uuid, String titleId) {
-        String sql = "INSERT INTO weekly_rank_awards(week_key, rank, uuid, title_id, awarded_at) VALUES(?,?,?,?,NOW()) " +
+        String sql = "INSERT INTO weekly_rank_awards(week_key, rank_position, uuid, title_id, awarded_at) VALUES(?,?,?,?,NOW()) " +
                 "ON DUPLICATE KEY UPDATE uuid = VALUES(uuid), title_id = VALUES(title_id), awarded_at = NOW()";
         try (Connection connection = dataSource.getConnection();
              PreparedStatement ps = connection.prepareStatement(sql)) {
