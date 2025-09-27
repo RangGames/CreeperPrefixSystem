@@ -1,0 +1,13 @@
+stats:
+  CROP_SALE_BONUS:
+    display: "<green>작물 판매 보너스</green>"
+    min: 0.0
+    max: 0.5
+    default: 0.0
+    stacking: ADD
+  FARM_CRIT:
+    display: "<gold>농사 치명타 확률</gold>"
+    min: 0.0
+    max: 0.3
+    default: 0.0
+    stacking: ADD

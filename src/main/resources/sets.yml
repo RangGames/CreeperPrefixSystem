@@ -1,0 +1,12 @@
+sets:
+  farm_trio:
+    name: "<green>팜 마스터 세트</green>"
+    members:
+      - carrot_king
+      - wheat_guardian
+      - potato_pro
+    effects:
+      - type: STAT_MOD
+        stat: CROP_SALE_BONUS
+        op: ADD
+        value: 0.05

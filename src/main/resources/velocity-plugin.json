@@ -1,0 +1,8 @@
+{
+  "id": "titleplus",
+  "name": "${project.name}",
+  "version": "${project.version}",
+  "description": "Proxy coordination module for TitlePlus",
+  "authors": ["Creeper"],
+  "main": "wiki.creeper.creeperPrefixSystem.velocity.TitlePlusVelocityPlugin"
+}

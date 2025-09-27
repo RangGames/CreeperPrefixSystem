@@ -1,0 +1,46 @@
+titles:
+  carrot_king:
+    display: "<gradient:#FF7F00:#FFD700>당근의 왕</gradient>"
+    rarity: EPIC
+    type: FARMING
+    requirements:
+      type: SELL
+      material: CARROT
+      amount: 5000
+    effects:
+      - type: STAT_MOD
+        stat: CROP_SALE_BONUS
+        op: ADD
+        value: 0.10
+      - type: POTION
+        potion: FAST_DIGGING
+        level: 1
+    skin:
+      prefix: "[🥕킹]"
+      nametag: "<gold>당근왕"
+  wheat_guardian:
+    display: "<yellow>밀의 수호자</yellow>"
+    rarity: RARE
+    type: FARMING
+    requirements:
+      type: BREAK
+      material: WHEAT
+      amount: 8000
+    effects:
+      - type: STAT_MOD
+        stat: CROP_SALE_BONUS
+        op: ADD
+        value: 0.05
+  potato_pro:
+    display: "<gradient:#C7923E:#D8B565>감자의 달인</gradient>"
+    rarity: RARE
+    type: FARMING
+    requirements:
+      type: SELL
+      material: POTATO
+      amount: 4000
+    effects:
+      - type: STAT_MOD
+        stat: FARM_CRIT
+        op: ADD
+        value: 0.05

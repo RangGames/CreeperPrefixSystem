@@ -1,0 +1,36 @@
+name: ${project.name}
+version: ${project.version}
+main: wiki.creeper.creeperPrefixSystem.TitlePlusPlugin
+api-version: '1.21'
+depend: []
+commands:
+  titles:
+    description: Open the title collection GUI.
+    usage: /titles
+    aliases: [titlelist]
+    permission: titles.use
+  title:
+    description: Manage your currently equipped title.
+    usage: /title <equip|unequip|info> [titleId]
+    permission: titles.use
+  titleadmin:
+    description: Administrative commands for TitlePlus.
+    usage: /titleadmin <grant|revoke|reload|season|weekly>
+    permission: titles.admin
+  rank:
+    description: View weekly rankings.
+    usage: /rank top [metric]
+    permission: titles.use
+permissions:
+  titles.use:
+    description: Allows using title commands.
+    default: true
+  titles.gui:
+    description: Allows opening the title GUI.
+    default: true
+  titles.admin:
+    description: Allows administrator commands.
+    default: op
+  titles.set:
+    description: Allows managing set bonuses via commands.
+    default: op

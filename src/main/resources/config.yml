@@ -1,0 +1,40 @@
+mysql:
+  host: localhost
+  port: 3306
+  database: titleplus
+  username: root
+  password: password
+  pool:
+    maximum-pool-size: 10
+    minimum-idle: 2
+    connection-timeout: 30000
+redis:
+  enabled: true
+  host: localhost
+  port: 6379
+  username: ''
+  password: ''
+  channels:
+    broadcast: tp.broadcast
+    api-request: tp.api.request
+    api-reply: tp.api.reply
+  keys:
+    season: tp:season:current
+    week: tp:week:current
+    weekly-top: tp:rank:top3
+network:
+  node-id: paper-node
+season:
+  auto-sync: true
+  sync-interval-ticks: 6000
+weekly:
+  metrics:
+    default: FARMING_POINTS
+  evaluation-interval-minutes: 5
+cache:
+  player-expire-seconds: 300
+  stat-mod-sync-seconds: 30
+bungeecord:
+  velocity-message-channel: titleplus:main
+logging:
+  debug: false
