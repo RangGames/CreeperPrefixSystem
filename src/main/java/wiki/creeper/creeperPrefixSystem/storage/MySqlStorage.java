@@ -2,7 +2,10 @@ package wiki.creeper.creeperPrefixSystem.storage;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import org.bukkit.Material;
 import wiki.creeper.creeperPrefixSystem.config.StorageConfig;
+import wiki.creeper.creeperPrefixSystem.data.achievement.AchievementCompletion;
+import wiki.creeper.creeperPrefixSystem.data.collection.CollectionEntry;
 import wiki.creeper.creeperPrefixSystem.data.player.PlayerStatState;
 import wiki.creeper.creeperPrefixSystem.data.player.PlayerTitleState;
 import wiki.creeper.creeperPrefixSystem.data.stat.StatModifier;
@@ -74,6 +77,16 @@ public final class MySqlStorage implements AutoCloseable {
                     "INDEX idx_player_titles_uuid(uuid)" +
                     ")");
 
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS collection_entries (" +
+                    "entry_id BIGINT PRIMARY KEY AUTO_INCREMENT," +
+                    "uuid BINARY(16)," +
+                    "material VARCHAR(64)," +
+                    "registered_at DATETIME," +
+                    "player_rank INT," +
+                    "UNIQUE KEY uq_collection_player_material(uuid, material)," +
+                    "INDEX idx_collection_uuid(uuid)" +
+                    ")");
+
             statement.executeUpdate("CREATE TABLE IF NOT EXISTS stat_defs (" +
                     "stat_id VARCHAR(64) PRIMARY KEY," +
                     "display VARCHAR(128)," +
@@ -132,6 +145,15 @@ public final class MySqlStorage implements AutoCloseable {
                     "progress BIGINT," +
                     "PRIMARY KEY(uuid, title_id)" +
                     ")");
+
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS achievement_completions (" +
+                    "completion_id BIGINT PRIMARY KEY AUTO_INCREMENT," +
+                    "uuid BINARY(16)," +
+                    "achievement_id VARCHAR(64)," +
+                    "completed_at DATETIME," +
+                    "UNIQUE KEY uq_achievement_player(uuid, achievement_id)," +
+                    "INDEX idx_achievement_uuid(uuid)" +
+                    ")");
         }
     }
 
@@ -189,6 +211,96 @@ public final class MySqlStorage implements AutoCloseable {
         } catch (SQLException ex) {
             logger.log(Level.SEVERE, "Failed to delete player title", ex);
         }
+    }
+
+    public List<CollectionEntry> loadCollectionEntries(UUID uuid) {
+        List<CollectionEntry> entries = new ArrayList<>();
+        String sql = "SELECT entry_id, material, registered_at, player_rank FROM collection_entries WHERE uuid = ? ORDER BY player_rank ASC";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setBytes(1, UuidUtil.toBytes(uuid));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String materialName = rs.getString("material");
+                    Material material = Material.matchMaterial(materialName);
+                    if (material == null) {
+                        continue;
+                    }
+                    Timestamp timestamp = rs.getTimestamp("registered_at");
+                    Instant registeredAt = timestamp == null ? Instant.EPOCH : timestamp.toInstant();
+                    int playerRank = rs.getInt("player_rank");
+                    long globalRank = rs.getLong("entry_id");
+                    entries.add(new CollectionEntry(material, registeredAt, playerRank, globalRank));
+                }
+            }
+        } catch (SQLException ex) {
+            logger.log(Level.SEVERE, "Failed to load collection entries", ex);
+        }
+        return entries;
+    }
+
+    public long insertCollectionEntry(UUID uuid, CollectionEntry entry) {
+        String sql = "INSERT INTO collection_entries(uuid, material, registered_at, player_rank) VALUES(?,?,?,?)";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setBytes(1, UuidUtil.toBytes(uuid));
+            ps.setString(2, entry.getMaterial().name());
+            ps.setTimestamp(3, Timestamp.from(entry.getRegisteredAt()));
+            ps.setInt(4, entry.getPlayerRank());
+            ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) {
+                    return keys.getLong(1);
+                }
+            }
+        } catch (SQLException ex) {
+            if (!isDuplicate(ex)) {
+                logger.log(Level.SEVERE, "Failed to insert collection entry", ex);
+            }
+        }
+        return 0L;
+    }
+
+    public List<AchievementCompletion> loadAchievementCompletions(UUID uuid) {
+        List<AchievementCompletion> completions = new ArrayList<>();
+        String sql = "SELECT completion_id, achievement_id, completed_at FROM achievement_completions WHERE uuid = ? ORDER BY completed_at ASC";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setBytes(1, UuidUtil.toBytes(uuid));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String achievementId = rs.getString("achievement_id");
+                    Timestamp timestamp = rs.getTimestamp("completed_at");
+                    Instant completedAt = timestamp == null ? Instant.EPOCH : timestamp.toInstant();
+                    long globalRank = rs.getLong("completion_id");
+                    completions.add(new AchievementCompletion(achievementId, completedAt, globalRank));
+                }
+            }
+        } catch (SQLException ex) {
+            logger.log(Level.SEVERE, "Failed to load achievement completions", ex);
+        }
+        return completions;
+    }
+
+    public long insertAchievementCompletion(UUID uuid, AchievementCompletion completion) {
+        String sql = "INSERT INTO achievement_completions(uuid, achievement_id, completed_at) VALUES(?,?,?)";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setBytes(1, UuidUtil.toBytes(uuid));
+            ps.setString(2, completion.getAchievementId());
+            ps.setTimestamp(3, Timestamp.from(completion.getCompletedAt()));
+            ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) {
+                    return keys.getLong(1);
+                }
+            }
+        } catch (SQLException ex) {
+            if (!isDuplicate(ex)) {
+                logger.log(Level.SEVERE, "Failed to insert achievement completion", ex);
+            }
+        }
+        return 0L;
     }
 
     public void loadPlayerStats(UUID uuid, PlayerStatState stats) {
@@ -422,6 +534,10 @@ public final class MySqlStorage implements AutoCloseable {
         } catch (SQLException ex) {
             logger.log(Level.SEVERE, "Failed to increment title progress", ex);
         }
+    }
+
+    private boolean isDuplicate(SQLException exception) {
+        return "23000".equals(exception.getSQLState());
     }
 
     @Override

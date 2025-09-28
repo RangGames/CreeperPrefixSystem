@@ -21,6 +21,11 @@ commands:
     description: View weekly rankings.
     usage: /rank top [metric]
     permission: titles.use
+  collection:
+    description: View your item collection progress.
+    usage: /collection
+    aliases: [도감, dogam]
+    permission: collection.use
 permissions:
   titles.use:
     description: Allows using title commands.
@@ -34,3 +39,6 @@ permissions:
   titles.set:
     description: Allows managing set bonuses via commands.
     default: op
+  collection.use:
+    description: Allows viewing the collection command.
+    default: true

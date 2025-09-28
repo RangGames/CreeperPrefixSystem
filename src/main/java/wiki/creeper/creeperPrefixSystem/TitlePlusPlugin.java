@@ -7,17 +7,22 @@ import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 import wiki.creeper.creeperPrefixSystem.api.TitlePlusAPI;
 import wiki.creeper.creeperPrefixSystem.api.TitlePlusAPIImpl;
+import wiki.creeper.creeperPrefixSystem.command.CollectionCommand;
 import wiki.creeper.creeperPrefixSystem.command.RankCommand;
 import wiki.creeper.creeperPrefixSystem.command.TitleAdminCommand;
 import wiki.creeper.creeperPrefixSystem.command.TitleCommand;
 import wiki.creeper.creeperPrefixSystem.command.TitlesCommand;
 import wiki.creeper.creeperPrefixSystem.config.TitlePlusConfiguration;
+import wiki.creeper.creeperPrefixSystem.data.achievement.AchievementRegistry;
 import wiki.creeper.creeperPrefixSystem.data.set.SetRegistry;
 import wiki.creeper.creeperPrefixSystem.data.stat.StatRegistry;
 import wiki.creeper.creeperPrefixSystem.data.title.TitleRegistry;
+import wiki.creeper.creeperPrefixSystem.listener.CollectionListener;
 import wiki.creeper.creeperPrefixSystem.listener.PlayerConnectionListener;
 import wiki.creeper.creeperPrefixSystem.listener.GameplayListener;
 import wiki.creeper.creeperPrefixSystem.redis.RedisBridge;
+import wiki.creeper.creeperPrefixSystem.service.AchievementService;
+import wiki.creeper.creeperPrefixSystem.service.CollectionService;
 import wiki.creeper.creeperPrefixSystem.service.NetworkSyncService;
 import wiki.creeper.creeperPrefixSystem.service.RequirementService;
 import wiki.creeper.creeperPrefixSystem.service.SeasonService;
@@ -44,6 +49,7 @@ public final class TitlePlusPlugin extends JavaPlugin {
     private TitleRegistry titleRegistry;
     private SetRegistry setRegistry;
     private StatRegistry statRegistry;
+    private AchievementRegistry achievementRegistry;
     private StatService statService;
     private TitleService titleService;
     private SeasonService seasonService;
@@ -53,6 +59,8 @@ public final class TitlePlusPlugin extends JavaPlugin {
     private int weeklyTaskId = -1;
     private RequirementService requirementService;
     private NetworkSyncService networkSyncService;
+    private AchievementService achievementService;
+    private CollectionService collectionService;
 
     @Override
     public void onEnable() {
@@ -82,19 +90,24 @@ public final class TitlePlusPlugin extends JavaPlugin {
         titleRegistry = new TitleRegistry(this);
         setRegistry = new SetRegistry(this);
         statRegistry = new StatRegistry(this);
+        achievementRegistry = new AchievementRegistry();
 
         FileConfiguration titlesConfig = YamlLoader.loadOrCopy(this, "titles.yml");
         FileConfiguration setsConfig = YamlLoader.loadOrCopy(this, "sets.yml");
         FileConfiguration statsConfig = YamlLoader.loadOrCopy(this, "stats.yml");
+        FileConfiguration achievementsConfig = YamlLoader.loadOrCopy(this, "achievements.yml");
         titleRegistry.load(titlesConfig);
         setRegistry.load(setsConfig);
         statRegistry.load(statsConfig);
+        achievementRegistry.load(achievementsConfig);
 
         statService = new StatService(this, statRegistry, storage, executor);
         titleService = new TitleService(this, titleRegistry, setRegistry, storage, statService, executor);
         seasonService = new SeasonService(getLogger(), storage, redis, executor, configuration);
         weeklyRankingService = new WeeklyRankingService(this, storage, redis, executor, configuration);
         requirementService = new RequirementService(titleRegistry, storage, titleService, weeklyRankingService, executor);
+        achievementService = new AchievementService(this, storage, achievementRegistry, executor);
+        collectionService = new CollectionService(this, storage, achievementService, executor);
         networkSyncService = new NetworkSyncService(getLogger(), redis, statService, configuration.nodeId(), configuration.redis().enabled());
         statService.setNetworkSync(networkSyncService);
 
@@ -102,7 +115,7 @@ public final class TitlePlusPlugin extends JavaPlugin {
         weeklyRankingService.refreshWeekKey();
         networkSyncService.init();
 
-        api = new TitlePlusAPIImpl(statService, titleService, weeklyRankingService, seasonService, titleRegistry, setRegistry, statRegistry, requirementService);
+        api = new TitlePlusAPIImpl(statService, titleService, weeklyRankingService, seasonService, titleRegistry, setRegistry, statRegistry, requirementService, collectionService, achievementService, achievementRegistry);
         getServer().getServicesManager().register(TitlePlusAPI.class, api, this, ServicePriority.Normal);
 
         registerListeners();
@@ -168,8 +181,20 @@ public final class TitlePlusPlugin extends JavaPlugin {
         return setRegistry;
     }
 
+    public AchievementRegistry getAchievementRegistry() {
+        return achievementRegistry;
+    }
+
     public RequirementService getRequirementService() {
         return requirementService;
+    }
+
+    public AchievementService getAchievementService() {
+        return achievementService;
+    }
+
+    public CollectionService getCollectionService() {
+        return collectionService;
     }
 
     private void reloadConfiguration() {
@@ -178,8 +203,9 @@ public final class TitlePlusPlugin extends JavaPlugin {
     }
 
     private void registerListeners() {
-        Bukkit.getPluginManager().registerEvents(new PlayerConnectionListener(this, titleService, statService, requirementService), this);
+        Bukkit.getPluginManager().registerEvents(new PlayerConnectionListener(titleService, statService, requirementService, collectionService, achievementService), this);
         Bukkit.getPluginManager().registerEvents(new GameplayListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new CollectionListener(collectionService), this);
     }
 
     private void registerCommands() {
@@ -200,6 +226,10 @@ public final class TitlePlusPlugin extends JavaPlugin {
         RankCommand rankExecutor = new RankCommand(this);
         rankCommand.setExecutor(rankExecutor);
         rankCommand.setTabCompleter(rankExecutor);
+
+        PluginCommand collectionCommand = Objects.requireNonNull(getCommand("collection"), "collection command missing");
+        CollectionCommand collectionExecutor = new CollectionCommand(this);
+        collectionCommand.setExecutor(collectionExecutor);
     }
 
     public void reloadAllResources() {
@@ -207,9 +237,11 @@ public final class TitlePlusPlugin extends JavaPlugin {
         FileConfiguration titlesConfig = YamlLoader.loadOrCopy(this, "titles.yml");
         FileConfiguration setsConfig = YamlLoader.loadOrCopy(this, "sets.yml");
         FileConfiguration statsConfig = YamlLoader.loadOrCopy(this, "stats.yml");
+        FileConfiguration achievementsConfig = YamlLoader.loadOrCopy(this, "achievements.yml");
         titleRegistry.load(titlesConfig);
         setRegistry.load(setsConfig);
         statRegistry.load(statsConfig);
+        achievementRegistry.load(achievementsConfig);
         requirementService.rebuildIndexes();
         getLogger().info("TitlePlus configuration reloaded.");
     }

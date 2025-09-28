@@ -1,0 +1,16 @@
+achievements:
+  collection_beginner:
+    display: "도감 입문자"
+    description: "도감을 1개 등록하세요."
+    type: COLLECTION_COUNT
+    target: 1
+  collection_collector:
+    display: "도감 연구가"
+    description: "도감을 10개 등록하세요."
+    type: COLLECTION_COUNT
+    target: 10
+  collection_master:
+    display: "도감 마스터"
+    description: "도감을 30개 등록하세요."
+    type: COLLECTION_COUNT
+    target: 30

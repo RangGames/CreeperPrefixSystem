@@ -4,6 +4,9 @@ import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import wiki.creeper.creeperPrefixSystem.data.achievement.AchievementCompletion;
+import wiki.creeper.creeperPrefixSystem.data.achievement.AchievementDefinition;
+import wiki.creeper.creeperPrefixSystem.data.collection.CollectionEntry;
 import wiki.creeper.creeperPrefixSystem.data.season.SeasonState;
 import wiki.creeper.creeperPrefixSystem.data.set.SetDefinition;
 import wiki.creeper.creeperPrefixSystem.data.stat.StatDefinition;
@@ -129,4 +132,25 @@ public interface TitlePlusAPI {
      * Convenience helper for SELL requirements.
      */
     void recordSale(@NotNull UUID uuid, @NotNull Material material, long amount);
+
+    /**
+     * Registers a collection entry forcibly, bypassing the natural acquisition chance.
+     */
+    default boolean registerCollection(@NotNull UUID uuid, @NotNull Material material) {
+        return registerCollection(uuid, material, true, true);
+    }
+
+    boolean registerCollection(@NotNull UUID uuid, @NotNull Material material, boolean grantXp, boolean notifyPlayer);
+
+    @NotNull Collection<CollectionEntry> getCollectionEntries(@NotNull UUID uuid);
+
+    boolean hasCollectionEntry(@NotNull UUID uuid, @NotNull Material material);
+
+    @NotNull Collection<AchievementCompletion> getAchievementCompletions(@NotNull UUID uuid);
+
+    boolean hasAchievement(@NotNull UUID uuid, @NotNull String achievementId);
+
+    @NotNull Collection<AchievementDefinition> getAchievementDefinitions();
+
+    @NotNull Optional<AchievementDefinition> getAchievementDefinition(@NotNull String achievementId);
 }

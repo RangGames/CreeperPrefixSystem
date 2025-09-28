@@ -3,19 +3,25 @@ package wiki.creeper.creeperPrefixSystem.api;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
+import wiki.creeper.creeperPrefixSystem.data.achievement.AchievementCompletion;
+import wiki.creeper.creeperPrefixSystem.data.achievement.AchievementDefinition;
+import wiki.creeper.creeperPrefixSystem.data.achievement.AchievementRegistry;
+import wiki.creeper.creeperPrefixSystem.data.collection.CollectionEntry;
 import wiki.creeper.creeperPrefixSystem.data.season.SeasonState;
 import wiki.creeper.creeperPrefixSystem.data.set.SetDefinition;
+import wiki.creeper.creeperPrefixSystem.data.set.SetRegistry;
 import wiki.creeper.creeperPrefixSystem.data.stat.StatDefinition;
 import wiki.creeper.creeperPrefixSystem.data.stat.StatModifier;
+import wiki.creeper.creeperPrefixSystem.data.stat.StatRegistry;
 import wiki.creeper.creeperPrefixSystem.data.title.TitleDefinition;
+import wiki.creeper.creeperPrefixSystem.data.title.TitleRegistry;
+import wiki.creeper.creeperPrefixSystem.service.AchievementService;
+import wiki.creeper.creeperPrefixSystem.service.CollectionService;
 import wiki.creeper.creeperPrefixSystem.service.RequirementService;
 import wiki.creeper.creeperPrefixSystem.service.SeasonService;
 import wiki.creeper.creeperPrefixSystem.service.StatService;
 import wiki.creeper.creeperPrefixSystem.service.TitleService;
 import wiki.creeper.creeperPrefixSystem.service.WeeklyRankingService;
-import wiki.creeper.creeperPrefixSystem.data.set.SetRegistry;
-import wiki.creeper.creeperPrefixSystem.data.stat.StatRegistry;
-import wiki.creeper.creeperPrefixSystem.data.title.TitleRegistry;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -35,6 +41,9 @@ public final class TitlePlusAPIImpl implements TitlePlusAPI {
     private final SetRegistry setRegistry;
     private final StatRegistry statRegistry;
     private final RequirementService requirementService;
+    private final CollectionService collectionService;
+    private final AchievementService achievementService;
+    private final AchievementRegistry achievementRegistry;
 
     public TitlePlusAPIImpl(StatService statService,
                             TitleService titleService,
@@ -43,7 +52,10 @@ public final class TitlePlusAPIImpl implements TitlePlusAPI {
                             TitleRegistry titleRegistry,
                             SetRegistry setRegistry,
                             StatRegistry statRegistry,
-                            RequirementService requirementService) {
+                            RequirementService requirementService,
+                            CollectionService collectionService,
+                            AchievementService achievementService,
+                            AchievementRegistry achievementRegistry) {
         this.statService = statService;
         this.titleService = titleService;
         this.weeklyRankingService = weeklyRankingService;
@@ -52,6 +64,9 @@ public final class TitlePlusAPIImpl implements TitlePlusAPI {
         this.setRegistry = setRegistry;
         this.statRegistry = statRegistry;
         this.requirementService = requirementService;
+        this.collectionService = collectionService;
+        this.achievementService = achievementService;
+        this.achievementRegistry = achievementRegistry;
     }
 
     @Override
@@ -116,6 +131,8 @@ public final class TitlePlusAPIImpl implements TitlePlusAPI {
         titleService.unload(uuid);
         statService.unload(uuid);
         requirementService.unload(uuid);
+        collectionService.unload(uuid);
+        achievementService.unload(uuid);
     }
 
     @Override
@@ -166,5 +183,40 @@ public final class TitlePlusAPIImpl implements TitlePlusAPI {
     @Override
     public void recordSale(@NotNull UUID uuid, @NotNull Material material, long amount) {
         requirementService.handleSell(uuid, material, amount);
+    }
+
+    @Override
+    public boolean registerCollection(@NotNull UUID uuid, @NotNull Material material, boolean grantXp, boolean notifyPlayer) {
+        return collectionService.registerEntry(uuid, material, grantXp, notifyPlayer);
+    }
+
+    @Override
+    public @NotNull Collection<CollectionEntry> getCollectionEntries(@NotNull UUID uuid) {
+        return collectionService.getEntries(uuid);
+    }
+
+    @Override
+    public boolean hasCollectionEntry(@NotNull UUID uuid, @NotNull Material material) {
+        return collectionService.hasEntry(uuid, material);
+    }
+
+    @Override
+    public @NotNull Collection<AchievementCompletion> getAchievementCompletions(@NotNull UUID uuid) {
+        return achievementService.getCompletions(uuid);
+    }
+
+    @Override
+    public boolean hasAchievement(@NotNull UUID uuid, @NotNull String achievementId) {
+        return achievementService.hasCompletion(uuid, achievementId);
+    }
+
+    @Override
+    public @NotNull Collection<AchievementDefinition> getAchievementDefinitions() {
+        return achievementRegistry.all();
+    }
+
+    @Override
+    public @NotNull Optional<AchievementDefinition> getAchievementDefinition(@NotNull String achievementId) {
+        return Optional.ofNullable(achievementRegistry.get(achievementId));
     }
 }
